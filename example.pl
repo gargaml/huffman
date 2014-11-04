@@ -69,7 +69,7 @@ build_tree(Cs, T) :-
 build_dictionnary(T, D) :-
     build_dictionnary(T, [], D).
  
-build_dictionnary(letter(C,_), Acc, [code(C,RAcc)]) :-
+build_dictionnary(letter(C,F), Acc, [code(letter(C,RAcc))]) :-
     reverse(Acc, RAcc).
 
 build_dictionnary(node(L,_,R), Acc, D) :-
@@ -77,17 +77,39 @@ build_dictionnary(node(L,_,R), Acc, D) :-
     build_dictionnary(R, [bit(1)|Acc], F),
     append(E, F, D).
 
-get_sequence(C, [code(letter(C,Seq))|D], Seq).
+get_sequence(C, [code(letter(C,Seq))|_], Seq).
 
-get_sequence(C, [_|D], Seq) :-
-    get_sequence(C, D, Seq).
+get_sequence(C, [code(letter(D, _))|Cs], Seq) :-
+    C \= D,
+    get_sequence(C, Cs, Seq).
 
-process(Cs,D,Bs) :-
-    
+zipper(z([],[])).
 
-start(F, R) :-
+zipper_move(z([Xs],[Y|Ys]),z([Y|Xs],Ys)).
+
+zipper_insert(X,z(Xs,Ys),z([X|Xs],Ys)).
+
+zipper_list(z(Xs,Ys), Zs) :-
+    reverse(Xs, As),
+    append(As, Ys, Zs).
+
+write_sequence([], Bs, Bs).
+
+write_sequence([X|Xs], Bs, Cs) :-
+    zipper_insert(X, Bs, R),
+    write_sequence(Xs, R, Cs).
+
+process([], D, Z, Z).
+
+process([C|Cs], D, Z, R) :-
+    get_sequence(C, D, S),
+    write_sequence(S, Z, ZZ),
+    process(Cs, D, ZZ, R).
+
+start(F, Cs, D, R) :-
     open(F, read, In, [eof_action(eof_code)]),
     read_all(In, Cs),
     build_tree(Cs, T),
-    build_dictionnary(T, R),
+    build_dictionnary(T, D),
+    process(Cs, D, z([],[]), R),
     close(In).
